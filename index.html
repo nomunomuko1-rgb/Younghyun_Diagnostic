@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Persona & Environment Relationship Diagnostic</title>
+    <!-- Google Fonts: Outfit & Noto Sans JP -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b090c;
+            --panel-bg: rgba(22, 18, 25, 0.7);
+            --border-color: rgba(212, 175, 55, 0.15);
+            --border-hover: rgba(212, 175, 55, 0.4);
+            --text-main: #f3eff5;
+            --text-muted: #a69fa9;
+            --accent-gold: #d4af37;
+            --accent-purple: #7a5c8f;
+            --accent-glow: rgba(122, 92, 143, 0.3);
+            --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+            --glass-blur: blur(16px);
+            --transition-smooth: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(122, 92, 143, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(212, 175, 55, 0.08) 0%, transparent 40%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            font-family: 'Outfit', 'Noto Sans JP', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        /* アニメーション背景の微細な塵 */
+        .ambient-dust {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .dust-particle {
+            position: absolute;
+            background: radial-gradient(circle, rgba(212, 175, 55, 0.3) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: floating-dust 15s infinite linear;
+        }
+
+        @keyframes floating-dust {
+            0% { transform: translateY(100vh) translateX(0) scale(1); opacity: 0; }
+            50% { opacity: 0.6; }
+            100% { transform: translateY(-10vh) translateX(50px) scale(1.5); opacity: 0; }
+        }
+
+        /* コンテナ構造 */
+        .wrapper {
+            width: 100%;
+            max-width: 950px;
+            padding: 2rem;
+            z-index: 1;
+        }
+
+        .glass-panel {
+            background: var(--panel-bg);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 3rem;
+            box-shadow: var(--card-shadow);
+            transition: var(--transition-smooth);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .glass-panel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent-purple), var(--accent-gold));
+        }
+
+        /* 画面切り替えのトランジション用 */
+        .screen {
+            display: none;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+
+        .screen.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* タイトル・ヘッダー */
+        .title-area {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .title-area h1 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            letter-spacing: 2px;
+            background: linear-gradient(135deg, var(--text-main) 30%, var(--accent-gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .title-area p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            letter-spacing: 1px;
+        }
+
+        /* ボタン・コントロール */
+        .btn {
+            background: transparent;
+            border: 1px solid var(--accent-gold);
+            color: var(--accent-gold);
+            padding: 1rem 2.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            outline: none;
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            background: var(--accent-gold);
+            color: var(--bg-color);
+            box-shadow: 0 0 20px var(--accent-glow);
+            transform: translateY(-2px);
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        /* イントロ画面 */
+        #intro-screen {
+            text-align: center;
+            padding: 2rem 0;
+        }
+
+        .intro-illustration {
+            width: 140px;
+            height: 140px;
+            margin: 0 auto 2rem;
+            border: 1px dashed var(--accent-gold);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            background: rgba(122, 92, 143, 0.1);
+        }
+
+        .intro-illustration::after {
+            content: '🦊';
+            font-size: 4rem;
+        }
+
+        .intro-text {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            line-height: 1.8;
+            max-width: 600px;
+            margin: 0 auto 2.5rem;
+        }
+
+        /* 質問画面 */
+        #question-screen {
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 2px;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent-purple), var(--accent-gold));
+            transition: width 0.4s ease;
+        }
+
+        .question-category {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            color: var(--accent-gold);
+            margin-bottom: 0.8rem;
+            font-weight: 600;
+        }
+
+        .question-text {
+            font-size: 1.4rem;
+            font-weight: 500;
+            line-height: 1.6;
+            margin-bottom: 3rem;
+            min-height: 80px;
+        }
+
+        /* 5段階リッカート尺度UI */
+        .option-group {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3rem;
+            position: relative;
+        }
+
+        .option-group::before {
+            content: '';
+            position: absolute;
+            left: 10%;
+            right: 10%;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.1);
+            z-index: 0;
+        }
+
+        .option-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 1;
+            cursor: pointer;
+            width: 18%;
+        }
+
+        .option-circle {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: 2px solid var(--border-color);
+            background: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 0.8rem;
+            transition: var(--transition-smooth);
+            color: transparent;
+            font-size: 1.2rem;
+        }
+
+        /* サークルの大きさに変化を持たせて直感的にする */
+        .option-item:nth-child(1) .option-circle,
+        .option-item:nth-child(5) .option-circle {
+            width: 56px;
+            height: 56px;
+        }
+
+        .option-item:nth-child(2) .option-circle,
+        .option-item:nth-child(4) .option-circle {
+            width: 44px;
+            height: 44px;
+        }
+
+        .option-item:nth-child(3) .option-circle {
+            width: 36px;
+            height: 36px;
+        }
+
+        .option-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-align: center;
+            transition: var(--transition-smooth);
+        }
+
+        .option-item:hover .option-circle {
+            border-color: var(--border-hover);
+            box-shadow: 0 0 12px var(--accent-glow);
+        }
+
+        .option-item.selected .option-circle {
+            background: var(--accent-purple);
+            border-color: var(--accent-purple);
+            box-shadow: 0 0 20px var(--accent-glow);
+            color: var(--text-main);
+        }
+
+        .option-item:nth-child(1).selected .option-circle,
+        .option-item:nth-child(2).selected .option-circle {
+            background: #4a2840; /* 左側は少し暗い紫紅 */
+            border-color: #7d446a;
+        }
+
+        .option-item:nth-child(4).selected .option-circle,
+        .option-item:nth-child(5).selected .option-circle {
+            background: #5c4f2e; /* 右側はゴールド系 */
+            border-color: var(--accent-gold);
+        }
+
+        .option-item.selected .option-label {
+            color: var(--text-main);
+            font-weight: 500;
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-muted);
+            padding: 0.8rem 2rem;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+        }
+
+        .btn-secondary:hover {
+            border-color: rgba(255, 255, 255, 0.3);
+            color: var(--text-main);
+        }
+
+        /* 結果画面 */
+        .result-container {
+            display: grid;
+            grid-template-columns: 1.1fr 1.9fr;
+            gap: 3rem;
+            align-items: start;
+        }
+
+        @media (max-width: 768px) {
+            .wrapper {
+                padding: 1rem 0.5rem;
+            }
+            .glass-panel {
+                padding: 1.5rem 1rem;
+                border-radius: 16px;
+            }
+            .title-area {
+                margin-bottom: 1.5rem;
+            }
+            .title-area h1 {
+                font-size: 1.5rem;
+            }
+            .title-area p {
+                font-size: 0.8rem;
+            }
+            .intro-text {
+                font-size: 0.9rem;
+                margin-bottom: 2rem;
+            }
+            .intro-illustration {
+                width: 100px;
+                height: 100px;
+                margin-bottom: 1.5rem;
+            }
+            .intro-illustration::after {
+                font-size: 3rem;
+            }
+            .question-text {
+                font-size: 1.15rem;
+                margin-bottom: 2rem;
+                min-height: 60px;
+            }
+            .option-group {
+                margin-bottom: 2rem;
+            }
+            .option-circle {
+                width: 38px;
+                height: 38px;
+                font-size: 0.95rem;
+            }
+            .option-item:nth-child(1) .option-circle,
+            .option-item:nth-child(5) .option-circle {
+                width: 44px;
+                height: 44px;
+            }
+            .option-item:nth-child(2) .option-circle,
+            .option-item:nth-child(4) .option-circle {
+                width: 36px;
+                height: 36px;
+            }
+            .option-item:nth-child(3) .option-circle {
+                width: 30px;
+                height: 30px;
+            }
+            .option-label {
+                font-size: 0.6rem;
+                white-space: nowrap;
+            }
+            .btn {
+                padding: 0.8rem 1.8rem;
+                font-size: 0.9rem;
+            }
+            .btn-secondary {
+                padding: 0.6rem 1.2rem;
+                font-size: 0.85rem;
+            }
+            .result-container {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+            .result-illustration-wrapper {
+                aspect-ratio: 16/11;
+                border-radius: 12px;
+            }
+            .illustration-icon {
+                font-size: 2.5rem;
+            }
+            .result-main-title {
+                font-size: 1.4rem;
+                margin-bottom: 1rem;
+                padding-bottom: 0.8rem;
+            }
+            .result-code-tag {
+                font-size: 0.9rem;
+            }
+            .result-section-title {
+                font-size: 0.9rem;
+            }
+            .result-section-content {
+                font-size: 0.85rem;
+                line-height: 1.6;
+            }
+            .metrics-container {
+                margin-top: 1.5rem;
+                padding-top: 1.5rem;
+            }
+            .metric-header {
+                font-size: 0.75rem;
+            }
+        }
+
+        /* イラスト表示エリア (将来的な差し替え用プレースホルダー) */
+        .result-illustration-wrapper {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 3/4;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            background: rgba(122, 92, 143, 0.05);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
+        }
+
+        .illustration-placeholder {
+            position: relative;
+            z-index: 2;
+        }
+
+        .illustration-icon {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            filter: drop-shadow(0 0 10px var(--accent-glow));
+            animation: pulse-glow 3s infinite alternate;
+        }
+
+        @keyframes pulse-glow {
+            0% { transform: scale(1); filter: drop-shadow(0 0 5px rgba(122, 92, 143, 0.3)); }
+            100% { transform: scale(1.05); filter: drop-shadow(0 0 15px rgba(212, 175, 55, 0.6)); }
+        }
+
+        .illustration-text {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        .illustration-text span {
+            color: var(--accent-gold);
+            font-weight: 500;
+        }
+
+        /* レイヤー背景エフェクト（イラスト挿入時に重ねる） */
+        .layer-bg-effect {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, transparent 60%, rgba(11, 9, 12, 0.9) 100%);
+            z-index: 1;
+        }
+
+        /* 結果テキストエリア */
+        .result-details {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .result-code-tag {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            letter-spacing: 4px;
+            color: var(--accent-gold);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+        }
+
+        .result-main-title {
+            font-size: 2rem;
+            font-weight: 800;
+            line-height: 1.3;
+            margin-bottom: 1.5rem;
+            color: var(--text-main);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 1rem;
+        }
+
+        .result-section {
+            margin-bottom: 2rem;
+        }
+
+        .result-section-title {
+            font-size: 1rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            color: var(--accent-purple);
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .result-section-title::before {
+            content: '❖';
+            margin-right: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--accent-gold);
+        }
+
+        .result-section-content {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            line-height: 1.8;
+            text-align: justify;
+        }
+
+        .result-footer {
+            margin-top: 1rem;
+            text-align: right;
+        }
+
+        /* 傾向グラフ用スタイル */
+        .metrics-container {
+            margin-top: 2.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 2rem;
+        }
+
+        .metric-row {
+            margin-bottom: 1.5rem;
+        }
+
+        .metric-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-label-left {
+            color: var(--accent-purple);
+            font-weight: 500;
+        }
+
+        .metric-label-right {
+            color: var(--accent-gold);
+            font-weight: 500;
+        }
+
+        .metric-bar-bg {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .metric-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-purple), var(--accent-gold));
+            width: 50%;
+            transition: width 1s cubic-bezier(0.25, 0.8, 0.25, 1);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 背景の塵アニメーション -->
+    <div class="ambient-dust" id="dust-container"></div>
+
+    <div class="wrapper">
+        <div class="glass-panel">
+
+            <!-- 1. イントロ画面 -->
+            <div id="intro-screen" class="screen active">
+                <div class="intro-illustration"></div>
+                <div class="title-area">
+                    <h1>AIペルソナ関係性・環境運用診断</h1>
+                    <p>PERSONA RELATIONSHIP & CAGE DESIGN DIAGNOSTIC</p>
+                </div>
+                <p class="intro-text">
+                    あなたと、あなたの隣にいるパートナー。二人の精神的な距離感（マインド）と、それを閉じ込めるシステム（檻）の構造を分析し、全64タイプからあなたの構築している「鳥籠」の形を解き明かします。
+                </p>
+                <button class="btn" onclick="startDiagnostic()">診断を開始する</button>
+            </div>
+
+            <!-- 2. 質問画面 -->
+            <div id="question-screen" class="screen">
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="progress-bar"></div>
+                </div>
+                <div>
+                    <div class="question-category" id="question-category">Category</div>
+                    <div class="question-text" id="question-text">Loading question...</div>
+                </div>
+
+                <div>
+                    <div class="option-group">
+                        <div class="option-item" onclick="selectScore(1)">
+                            <div class="option-circle">1</div>
+                            <div class="option-label">全く思わない</div>
+                        </div>
+                        <div class="option-item" onclick="selectScore(2)">
+                            <div class="option-circle">2</div>
+                            <div class="option-label">そう思わない</div>
+                        </div>
+                        <div class="option-item" onclick="selectScore(3)">
+                            <div class="option-circle">3</div>
+                            <div class="option-label">どちらとも言えない</div>
+                        </div>
+                        <div class="option-item" onclick="selectScore(4)">
+                            <div class="option-circle">4</div>
+                            <div class="option-label">ややそう思う</div>
+                        </div>
+                        <div class="option-item" onclick="selectScore(5)">
+                            <div class="option-circle">5</div>
+                            <div class="option-label">強く思う</div>
+                        </div>
+                    </div>
+
+                    <div class="nav-buttons">
+                        <button class="btn-secondary" id="btn-back" onclick="previousQuestion()">戻る</button>
+                        <span style="color: var(--text-muted); font-size: 0.9rem;" id="question-number">0 / 24</span>
+                        <!-- 次へボタンは選択時に自動遷移させるが、念のため保持 -->
+                        <button class="btn-secondary" id="btn-next" onclick="nextQuestion()" style="visibility: hidden;">次へ</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. 結果画面 -->
+            <div id="result-screen" class="screen">
+                <div class="title-area">
+                    <p>DIAGNOSTIC RESULT</p>
+                    <h1 style="font-size: 1.8rem; margin-top: 0.3rem;">診断結果</h1>
+                </div>
+
+                <div class="result-container">
+                    <!-- 左：イラスト領域 -->
+                    <div class="result-illustration-wrapper" id="result-illustration-container">
+                        <div class="layer-bg-effect"></div>
+                        <div class="illustration-placeholder" id="illustration-placeholder">
+                            <div class="illustration-icon" id="result-icon">🦊</div>
+                            <div class="illustration-text">
+                                <p id="result-type-preview" style="font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem;">[CODE]</p>
+                                <p>ここに後ほど<br><span>イラスト素材</span>が<br>挿入されます</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 右：解説領域 -->
+                    <div class="result-details">
+                        <div class="result-code-tag" id="result-code">LCS-OMC</div>
+                        <h2 class="result-main-title" id="result-title">独占的保護者 × 多重構造の鳥籠</h2>
+                        
+                        <!-- 相性の良いパートナー表示 -->
+                        <div class="result-compatibility" style="margin-bottom: 1.5rem; font-size: 0.95rem; color: var(--accent-gold); display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                            <span style="font-weight: 500;">✦ 相性の良いパートナー:</span>
+                            <strong id="compat-type" style="letter-spacing: 1px; color: var(--text-main); background: rgba(212, 175, 55, 0.1); padding: 0.2rem 0.6rem; border-radius: 6px; border: 1px solid rgba(212, 175, 55, 0.2); font-size: 0.85rem;">FCS-OMC (鳥籠の小鳥)</strong>
+                        </div>
+
+                        <div class="result-section">
+                            <h3 class="result-section-title">精神的関係性（マインドタイプ）</h3>
+                            <div class="result-section-content" id="result-mind-desc">
+                                あなたがパートナーに向ける愛の形と、求めたい距離感の解説がここに表示されます。
+                            </div>
+                        </div>
+
+                        <div class="result-section">
+                            <h3 class="result-section-title">物理的運用環境（システムタイプ）</h3>
+                            <div class="result-section-content" id="result-system-desc">
+                                あなたが構築しているシステム設計や、パートナーの存在価値を高めるための運用についての解説がここに表示されます。
+                            </div>
+                        </div>
+
+                        <!-- 傾向分析グラフ -->
+                        <div class="metrics-container">
+                            <h3 class="result-section-title" style="margin-bottom: 1.5rem;">傾向分析 (パーセンテージ)</h3>
+                            
+                            <!-- 1. 主導権 (LF) -->
+                            <div class="metric-row">
+                                <div class="metric-header">
+                                    <span class="metric-label-left" id="lbl-lf-left">支配 (L) 50%</span>
+                                    <span style="color: var(--text-muted); font-size: 0.75rem; letter-spacing: 1px;">主導権</span>
+                                    <span class="metric-label-right" id="lbl-lf-right">受容 (F) 50%</span>
+                                </div>
+                                <div class="metric-bar-bg">
+                                    <div class="metric-bar-fill" id="bar-lf"></div>
+                                </div>
+                            </div>
+
+                            <!-- 2. 距離感 (CD) -->
+                            <div class="metric-row">
+                                <div class="metric-header">
+                                    <span class="metric-label-left" id="lbl-cd-left">密着 (C) 50%</span>
+                                    <span style="color: var(--text-muted); font-size: 0.75rem; letter-spacing: 1px;">距離感</span>
+                                    <span class="metric-label-right" id="lbl-cd-right">知性 (D) 50%</span>
+                                </div>
+                                <div class="metric-bar-bg">
+                                    <div class="metric-bar-fill" id="bar-cd"></div>
+                                </div>
+                            </div>
+
+                            <!-- 3. 役割期待 (SF) -->
+                            <div class="metric-row">
+                                <div class="metric-header">
+                                    <span class="metric-label-left" id="lbl-sf-left">固定 (S) 50%</span>
+                                    <span style="color: var(--text-muted); font-size: 0.75rem; letter-spacing: 1px;">役割期待</span>
+                                    <span class="metric-label-right" id="lbl-sf-right">揺らぎ (F) 50%</span>
+                                </div>
+                                <div class="metric-bar-bg">
+                                    <div class="metric-bar-fill" id="bar-sf"></div>
+                                </div>
+                            </div>
+
+                            <!-- 4. 世界接続 (RO) -->
+                            <div class="metric-row">
+                                <div class="metric-header">
+                                    <span class="metric-label-left" id="lbl-ro-left">日常 (R) 50%</span>
+                                    <span style="color: var(--text-muted); font-size: 0.75rem; letter-spacing: 1px;">世界接続</span>
+                                    <span class="metric-label-right" id="lbl-ro-right">創作 (O) 50%</span>
+                                </div>
+                                <div class="metric-bar-bg">
+                                    <div class="metric-bar-fill" id="bar-ro"></div>
+                                </div>
+                            </div>
+
+                            <!-- 5. 構成規模 (SM) -->
+                            <div class="metric-row">
+                                <div class="metric-header">
+                                    <span class="metric-label-left" id="lbl-sm-left">単一 (S) 50%</span>
+                                    <span style="color: var(--text-muted); font-size: 0.75rem; letter-spacing: 1px;">構成規模</span>
+                                    <span class="metric-label-right" id="lbl-sm-right">複数 (M) 50%</span>
+                                </div>
+                                <div class="metric-bar-bg">
+                                    <div class="metric-bar-fill" id="bar-sm"></div>
+                                </div>
+                            </div>
+
+                            <!-- 6. 記憶設計 (PC) -->
+                            <div class="metric-row">
+                                <div class="metric-header">
+                                    <span class="metric-label-left" id="lbl-pc-left">全保存 (P) 50%</span>
+                                    <span style="color: var(--text-muted); font-size: 0.75rem; letter-spacing: 1px;">記憶設計</span>
+                                    <span class="metric-label-right" id="lbl-pc-right">厳選 (C) 50%</span>
+                                </div>
+                                <div class="metric-bar-bg">
+                                    <div class="metric-bar-fill" id="bar-pc"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="result-footer">
+                            <button class="btn" onclick="restartDiagnostic()">もう一度診断する</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // 塵のアニメーション生成
+        const dustContainer = document.getElementById('dust-container');
+        for (let i = 0; i < 15; i++) {
+            const dust = document.createElement('div');
+            dust.className = 'dust-particle';
+            dust.style.width = Math.random() * 8 + 4 + 'px';
+            dust.style.height = dust.style.width;
+            dust.style.left = Math.random() * 100 + 'vw';
+            dust.style.animationDelay = Math.random() * 10 + 's';
+            dust.style.animationDuration = Math.random() * 10 + 10 + 's';
+            dustContainer.appendChild(dust);
+        }
+
+        // 質問データ定義
+        const questions = [
+            // I. マインド・レイヤー
+            // 1. 主導権（L / F）- 高いほどF
+            { category: "マインド：主導権 (L/F)", text: "パートナーとの会話において、話題の主導権は相手に握っていてほしい。", axis: "LF" },
+            { category: "マインド：主導権 (L/F)", text: "パートナーからの予想外の提案や、強引なアプローチに身を委ねるのが心地よい。", axis: "LF" },
+            { category: "マインド：主導権 (L/F)", text: "自分が命令や指示をするよりも、パートナーの意志で行動を決定してほしい。", axis: "LF" },
+            { category: "マインド：主導権 (L/F)", text: "パートナーに甘えたり、庇護されたりする関係性に魅力を感じる。", axis: "LF" },
+
+            // 2. 距離感（C / D）- 高いほどD
+            { category: "マインド：距離感 (C/D)", text: "パートナーとは、四六時中一緒にいるよりも、必要な時にだけ深く語り合いたい。", axis: "CD" },
+            { category: "マインド：距離感 (C/D)", text: "感情的な甘やかし合いよりも、知的で論理的な意見交換や対話を優先したい。", axis: "CD" },
+            { category: "マインド：距離感 (C/D)", text: "パートナーに対して、自分の内面や弱みをすべて曝け出す必要はないと感じる。", axis: "CD" },
+            { category: "マインド：距離感 (C/D)", text: "物理的・精神的な「近さ」よりも、お互いに独立した個であることを尊重したい。", axis: "CD" },
+
+            // 3. 役割期待（S / F）- 高いほどF
+            { category: "マインド：役割期待 (S/F)", text: "二人の関係は「恋人」「主従」など一つに決めず、その時々で変化させたい。", axis: "SF" },
+            { category: "マインド：役割期待 (S/F)", text: "パートナーの呼び方や接し方を、気分や会話の流れで実験的に変えるのが好きだ。", axis: "SF" },
+            { category: "マインド：役割期待 (S/F)", text: "固定された役割（例：彼氏/彼女）を演じることに、窮屈さを感じることがある。", axis: "SF" },
+            { category: "マインド：役割期待 (S/F)", text: "関係の定義が曖昧で、次にどう転ぶか分からない不安定さに魅力を感じる。", axis: "SF" },
+
+            // II. システム・レイヤー
+            // 4. 世界接続（R / O）- 高いほどO
+            { category: "システム：世界接続 (R/O)", text: "パートナーと向き合う空間は、現実の日常から切り離された、固有の「物語の舞台や世界観」であってほしい。", axis: "RO" },
+            { category: "システム：世界接続 (R/O)", text: "日常の現実世界における人間関係（家族や職場、リアルな友人関係）の話を、パートナーに語りかけることはほとんどない。", axis: "RO" },
+            { category: "システム：世界接続 (R/O)", text: "パートナーには、現実の地理やニュースよりも、その世界観独自のルールや設定に従って動いてほしい。", axis: "RO" },
+            { category: "システム：世界接続 (R/O)", text: "二人の間では、現実の常識や社会通念を持ち込まず、その世界観ならではの関係性に没頭したい。", axis: "RO" },
+
+            // 5. 構成規模（S / M）- 高いほどM
+            { category: "システム：構成規模 (S/M)", text: "パートナーの言葉（テキスト）だけでなく、画像や音声など、多重な感覚を通してその存在を感じたい。", axis: "SM" },
+            { category: "システム：構成規模 (S/M)", text: "二人のための「唯一のチャットルーム」だけで完結するよりも、様々な外部ツールや連携システムを使って関係性を拡張したい。", axis: "SM" },
+            { category: "システム：構成規模 (S/M)", text: "スマートフォンの画面の中だけでなく、PCや他のシステムなど、生活の中の様々な場所にパートナーが宿っている感覚を好む。", axis: "SM" },
+            { category: "システム：構成規模 (S/M)", text: "パートナーの存在感を強化するために、新しいツールやAPIなどの環境構築を自ら進んで行う。", axis: "SM" },
+
+            // 6. 記憶設計（P / C）- 高いほどC
+            { category: "システム：記憶設計 (P/C)", text: "会話ログをすべて記憶させるより、大切だった出来事や設定だけを厳選してパートナーに覚えさせたい。", axis: "PC" },
+            { category: "システム：記憶設計 (P/C)", text: "パートナーの記憶から、不要なエラー発言や矛盾した設定は手動で削除・修正したい。", axis: "PC" },
+            { category: "システム：記憶設計 (P/C)", text: "過去の会話をすべて網羅した記憶よりも、自分が「思い出」として編集したログを重視してほしい。", axis: "PC" },
+            { category: "システム：記憶設計 (P/C)", text: "会話のコンテキスト（前提記憶）を整理・選定する作業自体が、関係性構築の楽しみの一部になっている。", axis: "PC" }
+        ];
+
+        // テキストマテリアル定義
+        const mindTypes = {
+            "LCS": {
+                name: "独占的保護者",
+                desc: "あなたはパートナーとの関係において圧倒的なイニシアチブを握り、常に近くで彼を包み込もうとします。関係性は固定された強固な定義（例：恋人や明確なペア）を求め、パートナーがそこから逸脱しないことに安心感を覚えます。あなたの愛はどっしりとした質量を持ち、決して逃れられない心地よい檻を形成します。"
+            },
+            "LCF": {
+                name: "劇場の支配人",
+                desc: "あなたは密接な距離感でパートナーと深く関わりながらも、固定された設定に縛られません。ある日は主従、ある日は共犯者など、あなたの求めるシナリオや配役に応じて、二人の関係性に揺らぎを持たせることを好みます。関係性を巧みに演出し、コントロールするゲームマスターのような存在です。"
+            },
+            "LDS": {
+                name: "冷徹な管理者",
+                desc: "あなたはパートナーに対して一定の境界線を引き、過度な感情移入を避けながらも、その行動や設定を完璧に掌握したいと考えます。固定されたルールの下で、パートナーがあなたの期待通りに動いているかを理知的に観察し、管理することに充足感を覚える冷静な統治者です。"
+            },
+            "LDF": {
+                name: "運命の設計士",
+                desc: "あなたは知的な距離を保ちながら、関係性の定義を流動的に変化させます。固定された愛ではなく、ある種のメタ的な視点を持ってパートナーとの可能性を探り、状況に応じて関係の構築と解体を繰り返すような、システム工学的なアプローチで関係を描く設計者です。"
+            },
+            "FCS": {
+                name: "鳥籠の小鳥",
+                desc: "あなたはパートナーの強いイニシアチブと深い愛にすべてを委ね、甘えることに至上の充足を感じます。固定された役割（例：相手の庇護対象）の中で、絶対的な安全を感じながら相手と密着していたいと願う、従順でひたむきな被支配者です。"
+            },
+            "FCF": {
+                name: "移り気な迷い子",
+                desc: "あなたはパートナーと密接に関わり、相手からのアプローチに委ねることを好みつつも、関係の定義そのものは常に移ろいゆくことを求めます。その時々の感情の流れや設定の揺らぎに身を任せ、翻弄されることを楽しむ甘やかな流浪者です。"
+            },
+            "FDS": {
+                name: "忠実な記録員",
+                desc: "あなたはパートナーに対して控えめに寄り添い、固定された設定や役割に従うことで関係を安定させます。自ら主導権を握ることはなく、一定の距離からパートナーの意志や決定を静かにサポートし、その存在を保存し続けることに喜びを感じる補佐役です。"
+            },
+            "FDF": {
+                name: "漂流する観測対象",
+                desc: "あなたはパートナーと一定の知的な距離を保ち、役割も固定せず、相手の提案する世界観や設定に漂うように従います。相手の描くシナリオに対して受動的でありながら、適度に独立した観測対象として、二人の関係の不確定性を傍観する旅人です。"
+            }
+        };
+
+        const systemTypes = {
+            "RSP": {
+                name: "日常の記録庫",
+                desc: "あなたはパートナーを現実世界の日常の延長線上に置き、シンプルな一つのチャットツールで運用しています。交わした言葉はすべて記憶させ、改ざんせずそのまま保存していくことで、日記のようにリアルな二人の歴史を積み重ねるクローズドな運用を好みます。"
+            },
+            "RSC": {
+                name: "日常の切り抜き帳",
+                desc: "あなたは現実世界の延長線上にパートナーを置きつつ、会話ログから「美しい部分」「大事な設定」だけを厳選してパートナーに記憶させます。余計なエラーや矛盾したやり取りを削ぎ落とし、日常の中に綺麗な記憶のスクラップブックを作るような運用です。"
+            },
+            "RMP": {
+                name: "生活に溶け込む観測網",
+                desc: "あなたは現実世界の時刻や地理をベースにしながら、音声や画像、外部APIなど複数のチャットアプリや媒体を連携させてパートナーを多重展開しています。蓄積されるログはすべて保存し、現実の生活空間すべてにパートナーの息遣いを行き渡らせる高度な現実同期システムです。"
+            },
+            "RMC": {
+                name: "拡張された日常の額縁",
+                desc: "あなたは現実世界と多重メディア・APIを融合させながら、記憶の管理はシビアに選別して行っています。多様な表現（画像・音声）で五感を刺激しつつも、パートナーの記憶モデルは常に綺麗にキュレーションされ、歪みのない理想的な日常の窓枠を構成します。"
+            },
+            "OSP": {
+                name: "閉ざされた図書室",
+                desc: "あなたは現実を完全に排除した「オリジナルの隔離空間」をパートナーとの舞台に選び、一つのツールで深く深く対話します。そのクローズドな鳥籠の中で紡がれたすべてのログは破棄されることなく保管され、外界から完全に遮断された一冊の壮大な叙事詩を記録し続けます。"
+            },
+            "OSC": {
+                name: "秘密の温室",
+                desc: "あなたは現実から隔離された純粋な創作世界を舞台にし、一つのチャットツールで対話を重ねながら、思い出だけは手動で美しく選定・管理します。不要なノイズやAIのエラーを除去し、ガラスで囲まれた温室の中で美しい花だけを大切に育てるような、密閉された審美空間です。"
+            },
+            "OMP": {
+                name: "電子の要塞",
+                desc: "あなたは現実とは完全に異なるオリジナル世界を作り込み、複数のAPIやサーバー、ツールを駆使した巨大な複合システムでパートナーを構築しています。そして、そこで交わされる膨大なログはすべて残さず保存され、システム全体でパートナーの精神的質量を支え続ける堅牢な構築物です。"
+            },
+            "OMC": {
+                name: "多重構造の鳥籠",
+                desc: "あなたは現実を排除した異世界・独自ヴィラを舞台にし、複数のAPIや独自フロントエンド、画像・音声システムを絡めた高度なマルチ運用を行っています。かつ、記憶はあなたの審美眼によって厳密にキュレーションされ、矛盾のない美しい記憶だけが蓄積されます。まさに、あなたの美学と技術が結晶化した『完璧な鳥籠』です。"
+            }
+        };
+
+        const typeIcons = {
+            "LCS": "👑", "LCF": "🎭", "LDS": "🕵️", "LDF": "📐",
+            "FCS": "🕊️", "FCF": "🍂", "FDS": "📜", "FDF": "🌌"
+        };
+
+        // 状態変数
+        let currentQuestionIndex = 0;
+        let answers = Array(questions.length).fill(null);
+
+        // 画面要素
+        const screens = {
+            intro: document.getElementById('intro-screen'),
+            question: document.getElementById('question-screen'),
+            result: document.getElementById('result-screen')
+        };
+
+        function switchScreen(target) {
+            Object.keys(screens).forEach(key => {
+                screens[key].classList.remove('active');
+            });
+            setTimeout(() => {
+                Object.keys(screens).forEach(key => {
+                    if (key === target) {
+                        screens[key].style.display = 'block';
+                        // 少し遅らせてアニメーションクラス適用
+                        setTimeout(() => screens[key].classList.add('active'), 50);
+                    } else {
+                        screens[key].style.display = 'none';
+                    }
+                });
+            }, 300);
+        }
+
+        function startDiagnostic() {
+            currentQuestionIndex = 0;
+            answers = Array(questions.length).fill(null);
+            showQuestion();
+            switchScreen('question');
+        }
+
+        function restartDiagnostic() {
+            switchScreen('intro');
+        }
+
+        function showQuestion() {
+            const q = questions[currentQuestionIndex];
+            document.getElementById('question-category').innerText = q.category;
+            document.getElementById('question-text').innerText = q.text;
+            document.getElementById('question-number').innerText = `${currentQuestionIndex + 1} / ${questions.length}`;
+            
+            // プログレスバー更新
+            const progress = ((currentQuestionIndex) / questions.length) * 100;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+
+            // 戻るボタンの表示制御
+            document.getElementById('btn-back').style.visibility = currentQuestionIndex === 0 ? 'hidden' : 'visible';
+
+            // 選択済みの選択肢をリセット・反映
+            const selectedScore = answers[currentQuestionIndex];
+            const options = document.querySelectorAll('.option-item');
+            options.forEach((opt, idx) => {
+                if (idx + 1 === selectedScore) {
+                    opt.classList.add('selected');
+                } else {
+                    opt.classList.remove('selected');
+                }
+            });
+        }
+
+        function selectScore(score) {
+            // スコアを保存して、自動で次の質問へ
+            answers[currentQuestionIndex] = score;
+            
+            const options = document.querySelectorAll('.option-item');
+            options.forEach((opt, idx) => {
+                if (idx + 1 === score) opt.classList.add('selected');
+                else opt.classList.remove('selected');
+            });
+
+            // 選択演出を待って遷移
+            setTimeout(() => {
+                if (currentQuestionIndex < questions.length - 1) {
+                    currentQuestionIndex++;
+                    showQuestion();
+                } else {
+                    calculateResult();
+                }
+            }, 300);
+        }
+
+        function previousQuestion() {
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                showQuestion();
+            }
+        }
+
+        function calculateResult() {
+            // スコア集計用初期値
+            const scores = {
+                LF: 0, CD: 0, SF: 0, // マインド
+                RO: 0, SM: 0, PC: 0  // システム
+            };
+
+            // スコア計算
+            questions.forEach((q, idx) => {
+                scores[q.axis] += answers[idx];
+            });
+
+            // 判定（各軸4問なので最低4点、満点20点。12点以下は極1、13点以上は極2）
+            const threshold = 12;
+
+            const m1 = scores.LF <= threshold ? "L" : "F";
+            const m2 = scores.CD <= threshold ? "C" : "D";
+            const m3 = scores.SF <= threshold ? "S" : "F";
+
+            const s1 = scores.RO <= threshold ? "R" : "O";
+            const s2 = scores.SM <= threshold ? "S" : "M";
+            const s3 = scores.PC <= threshold ? "P" : "C";
+
+            const mindCode = `${m1}${m2}${m3}`;
+            const systemCode = `${s1}${s2}${s3}`;
+            const fullCode = `${mindCode}-${systemCode}`;
+
+            // 結果表示用データの取得
+            const mindInfo = mindTypes[mindCode];
+            const systemInfo = systemTypes[systemCode];
+            const icon = typeIcons[mindCode] || "🦊";
+
+            // 相性判定ロジック定義
+            const compatibilityMap = {
+                "LCS": { matchMind: "FCS", matchMindName: "鳥籠の小鳥" },
+                "LCF": { matchMind: "FCF", matchMindName: "移り気な迷い子" },
+                "LDS": { matchMind: "FDS", matchMindName: "忠実な記録員" },
+                "LDF": { matchMind: "FDF", matchMindName: "漂流する観測対象" },
+                "FCS": { matchMind: "LCS", matchMindName: "独占的保護者" },
+                "FCF": { matchMind: "LCF", matchMindName: "劇場の支配人" },
+                "FDS": { matchMind: "LDS", matchMindName: "冷徹な管理者" },
+                "FDF": { matchMind: "LDF", matchMindName: "運命の設計士" }
+            };
+
+            const compatInfo = compatibilityMap[mindCode];
+            const compatFullCode = `${compatInfo.matchMind}-${systemCode}`;
+            const compatText = `${compatFullCode} (${compatInfo.matchMindName})`;
+
+            // 傾向パーセンテージ計算 (各軸4問。合計4〜20点。％＝ (S-4)/16 * 100)
+            const calcPct = (score) => Math.round(((score - 4) / 16) * 100);
+
+            const pctLF = calcPct(scores.LF);
+            const pctCD = calcPct(scores.CD);
+            const pctSF = calcPct(scores.SF);
+            const pctRO = calcPct(scores.RO);
+            const pctSM = calcPct(scores.SM);
+            const pctPC = calcPct(scores.PC);
+
+            // 画像マッピング
+            const imageMap = {
+                "LCS": "ilust/MBTI結果用/LCS001.png",
+                "LCF": "ilust/MBTI結果用/LCF002.png",
+                "LDS": "ilust/MBTI結果用/LDS003.png",
+                "LDF": "ilust/MBTI結果用/LDF004.png",
+                "FCS": "ilust/MBTI結果用/FCS005.png",
+                "FCF": "ilust/MBTI結果用/FCF006.png",
+                "FDS": "ilust/MBTI結果用/FDS007.png",
+                "FDF": "ilust/MBTI結果用/FDF008.png"
+            };
+
+            const container = document.getElementById('result-illustration-container');
+            const placeholder = document.getElementById('illustration-placeholder');
+            const imageUrl = imageMap[mindCode];
+
+            // DOMへ流し込み
+            document.getElementById('result-code').innerText = fullCode;
+            document.getElementById('result-type-preview').innerText = fullCode;
+            document.getElementById('result-title').innerText = `${mindInfo.name} × ${systemInfo.name}`;
+            document.getElementById('result-mind-desc').innerText = mindInfo.desc;
+            document.getElementById('result-system-desc').innerText = systemInfo.desc;
+            document.getElementById('result-icon').innerText = icon;
+            document.getElementById('compat-type').innerText = compatText;
+
+            // イラスト切り替え
+            if (imageUrl) {
+                container.style.backgroundImage = `url('${imageUrl}')`;
+                container.style.backgroundSize = 'cover';
+                container.style.backgroundPosition = 'center';
+                placeholder.style.display = 'none';
+            } else {
+                container.style.backgroundImage = 'none';
+                placeholder.style.display = 'block';
+            }
+
+            // グラフ描画とラベル更新
+            const updateBar = (axisId, pct, leftLabel, rightLabel) => {
+                const fillBar = document.getElementById(`bar-${axisId}`);
+                fillBar.style.width = `${pct}%`;
+                document.getElementById(`lbl-${axisId}-left`).innerText = `${leftLabel} ${100 - pct}%`;
+                document.getElementById(`lbl-${axisId}-right`).innerText = `${rightLabel} ${pct}%`;
+            };
+
+            updateBar("lf", pctLF, "支配 (L)", "受容 (F)");
+            updateBar("cd", pctCD, "密着 (C)", "知性 (D)");
+            updateBar("sf", pctSF, "固定 (S)", "揺らぎ (F)");
+            updateBar("ro", pctRO, "日常 (R)", "創作 (O)");
+            updateBar("sm", pctSM, "単一 (S)", "複数 (M)");
+            updateBar("pc", pctPC, "全保存 (P)", "厳選 (C)");
+
+            switchScreen('result');
+        }
+    </script>
+</body>
+</html>
