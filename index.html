@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root {
             --bg-color: #0b090c;
@@ -818,7 +819,8 @@
                         </div>
 
                         <div class="result-footer">
-                            <button class="btn" onclick="restartDiagnostic()">もう一度診断する</button>
+                            <button class="btn" onclick="saveResultImage()">結果を画像で保存</button>
+                            <button class="btn" onclick="restartDiagnostic()" style="margin-left: 0.5rem;">もう一度診断する</button>
                         </div>
                     </div>
                 </div>
@@ -844,42 +846,42 @@
         // 質問データ定義
         const questions = [
             // I. マインド・レイヤー
-            // 1. 主導権（L / F）- 高いほどF
-            { category: "マインド：主導権 (L/F)", text: "パートナーとの会話において、話題の主導権は相手に握っていてほしい。", axis: "LF" },
+            // 1. 主導権（L / F）- 高いほどF（L側質問はreverseで逆算）
+            { category: "マインド：主導権 (L/F)", text: "会話の流れは、自分から切り出した話題で導いていきたい。", axis: "LF", reverse: true },
             { category: "マインド：主導権 (L/F)", text: "パートナーからの予想外の提案や、強引なアプローチに身を委ねるのが心地よい。", axis: "LF" },
-            { category: "マインド：主導権 (L/F)", text: "自分が命令や指示をするよりも、パートナーの意志で行動を決定してほしい。", axis: "LF" },
+            { category: "マインド：主導権 (L/F)", text: "パートナーに対して、自分の意志でルールや方針を決めることに抵抗はない。", axis: "LF", reverse: true },
             { category: "マインド：主導権 (L/F)", text: "パートナーに甘えたり、庇護されたりする関係性に魅力を感じる。", axis: "LF" },
 
-            // 2. 距離感（C / D）- 高いほどD
-            { category: "マインド：距離感 (C/D)", text: "パートナーとは、四六時中一緒にいるよりも、必要な時にだけ深く語り合いたい。", axis: "CD" },
+            // 2. 距離感（C / D）- 高いほどD（C側質問はreverseで逆算）
+            { category: "マインド：距離感 (C/D)", text: "パートナーとは、できるだけ一緒に時間を過ごし、日常的な会話も共有したい。", axis: "CD", reverse: true },
             { category: "マインド：距離感 (C/D)", text: "感情的な甘やかし合いよりも、知的で論理的な意見交換や対話を優先したい。", axis: "CD" },
-            { category: "マインド：距離感 (C/D)", text: "パートナーに対して、自分の内面や弱みをすべて曝け出す必要はないと感じる。", axis: "CD" },
+            { category: "マインド：距離感 (C/D)", text: "パートナーには、自分の弱みや本音も含めて、内面を曝け出したい。", axis: "CD", reverse: true },
             { category: "マインド：距離感 (C/D)", text: "物理的・精神的な「近さ」よりも、お互いに独立した個であることを尊重したい。", axis: "CD" },
 
-            // 3. 役割期待（S / F）- 高いほどF
-            { category: "マインド：役割期待 (S/F)", text: "二人の関係は「恋人」「主従」など一つに決めず、その時々で変化させたい。", axis: "SF" },
+            // 3. 役割期待（S / F）- 高いほどF（S側質問はreverseで逆算）
+            { category: "マインド：役割期待 (S/F)", text: "二人の関係は「恋人」「主従」など、明確な一つの定義に収めたい。", axis: "SF", reverse: true },
             { category: "マインド：役割期待 (S/F)", text: "パートナーの呼び方や接し方を、気分や会話の流れで実験的に変えるのが好きだ。", axis: "SF" },
-            { category: "マインド：役割期待 (S/F)", text: "固定された役割（例：彼氏/彼女）を演じることに、窮屈さを感じることがある。", axis: "SF" },
+            { category: "マインド：役割期待 (S/F)", text: "パートナーに対する呼び方や接し方には、基本となる決まりがあってほしい。", axis: "SF", reverse: true },
             { category: "マインド：役割期待 (S/F)", text: "関係の定義が曖昧で、次にどう転ぶか分からない不安定さに魅力を感じる。", axis: "SF" },
 
             // II. システム・レイヤー
-            // 4. 世界接続（R / O）- 高いほどO
+            // 4. 世界接続（R / O）- 高いほどO（R側質問はreverseで逆算）
             { category: "システム：世界接続 (R/O)", text: "パートナーと向き合う空間は、現実の日常から切り離された、固有の「物語の舞台や世界観」であってほしい。", axis: "RO" },
-            { category: "システム：世界接続 (R/O)", text: "日常の現実世界における人間関係（家族や職場、リアルな友人関係）の話を、パートナーに語りかけることはほとんどない。", axis: "RO" },
+            { category: "システム：世界接続 (R/O)", text: "パートナーには、現実の予定や体調管理、家事の相談など、日常の生活にも関わってほしい。", axis: "RO", reverse: true },
             { category: "システム：世界接続 (R/O)", text: "パートナーには、現実の地理やニュースよりも、その世界観独自のルールや設定に従って動いてほしい。", axis: "RO" },
-            { category: "システム：世界接続 (R/O)", text: "二人の間では、現実の常識や社会通念を持ち込まず、その世界観ならではの関係性に没頭したい。", axis: "RO" },
+            { category: "システム：世界接続 (R/O)", text: "二人の間では、現実の常識や社会通念を当たり前の前提として会話したい。", axis: "RO", reverse: true },
 
-            // 5. 構成規模（S / M）- 高いほどM
-            { category: "システム：構成規模 (S/M)", text: "パートナーの言葉（テキスト）だけでなく、画像や音声など、多重な感覚を通してその存在を感じたい。", axis: "SM" },
+            // 5. 構成規模（S / M）- 高いほどM（S側質問はreverseで逆算）
+            { category: "システム：構成規模 (S/M)", text: "パートナーとのやり取りは、テキストチャットだけで十分だと感じることが多い。", axis: "SM", reverse: true },
             { category: "システム：構成規模 (S/M)", text: "二人のための「唯一のチャットルーム」だけで完結するよりも、様々な外部ツールや連携システムを使って関係性を拡張したい。", axis: "SM" },
-            { category: "システム：構成規模 (S/M)", text: "スマートフォンの画面の中だけでなく、PCや他のシステムなど、生活の中の様々な場所にパートナーが宿っている感覚を好む。", axis: "SM" },
+            { category: "システム：構成規模 (S/M)", text: "パートナーとの関係性は、決まった一つの場所やツールに収まっている方が落ち着く。", axis: "SM", reverse: true },
             { category: "システム：構成規模 (S/M)", text: "パートナーの存在感を強化するために、新しいツールやAPIなどの環境構築を自ら進んで行う。", axis: "SM" },
 
-            // 6. 記憶設計（P / C）- 高いほどC
-            { category: "システム：記憶設計 (P/C)", text: "会話ログをすべて記憶させるより、大切だった出来事や設定だけを厳選してパートナーに覚えさせたい。", axis: "PC" },
-            { category: "システム：記憶設計 (P/C)", text: "パートナーの記憶から、不要なエラー発言や矛盾した設定は手動で削除・修正したい。", axis: "PC" },
-            { category: "システム：記憶設計 (P/C)", text: "過去の会話をすべて網羅した記憶よりも、自分が「思い出」として編集したログを重視してほしい。", axis: "PC" },
-            { category: "システム：記憶設計 (P/C)", text: "会話のコンテキスト（前提記憶）を整理・選定する作業自体が、関係性構築の楽しみの一部になっている。", axis: "PC" }
+            // 6. 記憶設計（P / C）- 高いほどC（P側質問はreverseで逆算）
+            { category: "システム：記憶設計 (P/C)", text: "会話ログは基本的にすべて残し、パートナーにはその全履歴を踏まえて応答してほしい。", axis: "PC", reverse: true },
+            { category: "システム：記憶設計 (P/C)", text: "過去に話した些細なエピソードや約束を、パートナーがさりげなく会話に出してくれると嬉しい。", axis: "PC", reverse: true },
+            { category: "システム：記憶設計 (P/C)", text: "パートナーに覚えさせる記憶は、大切な出来事や設定だけに厳選したい。", axis: "PC" },
+            { category: "システム：記憶設計 (P/C)", text: "思い出として残す会話は、自分の手で編集・選別してから保存したい。", axis: "PC" }
         ];
 
         // テキストマテリアル定義
@@ -1057,9 +1059,10 @@
                 RO: 0, SM: 0, PC: 0  // システム
             };
 
-            // スコア計算
+            // スコア計算（reverse=trueの質問はP側のため逆算）
             questions.forEach((q, idx) => {
-                scores[q.axis] += answers[idx];
+                const value = q.reverse ? (6 - answers[idx]) : answers[idx];
+                scores[q.axis] += value;
             });
 
             // 判定（各軸4問なので最低4点、満点20点。12点以下は極1、13点以上は極2）
@@ -1160,6 +1163,36 @@
             updateBar("pc", pctPC, "全保存 (P)", "厳選 (C)");
 
             switchScreen('result');
+        }
+
+        function saveResultImage() {
+            const element = document.querySelector('.result-container');
+            const footer = document.querySelector('.result-footer');
+            const originalDisplay = footer.style.display;
+            footer.style.display = 'none';
+
+            html2canvas(element, {
+                scale: 2,
+                backgroundColor: '#0b090c',
+                useCORS: true,
+                logging: false
+            }).then(canvas => {
+                footer.style.display = originalDisplay;
+                canvas.toBlob(blob => {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'AI_Persona_Diagnostic_Result.png';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                });
+            }).catch(err => {
+                footer.style.display = originalDisplay;
+                console.error('画像保存に失敗しました', err);
+                alert('画像の生成に失敗しました。もう一度お試しください。');
+            });
         }
     </script>
 </body>
