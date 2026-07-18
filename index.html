@@ -4,6 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Persona & Environment Relationship Diagnostic</title>
+    <!-- OGP / Twitter Card -->
+    <meta property="og:title" content="AIペルソナ関係性・環境運用診断">
+    <meta property="og:description" content="マインドとシステムの6軸から、全64タイプの「鳥籠」を診断。">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://nomunomuko1-rgb.github.io/Persona-Cage-Diagnostic/">
+    <meta property="og:image" content="https://nomunomuko1-rgb.github.io/Persona-Cage-Diagnostic/ilust/og-card.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="AIペルソナ関係性・環境運用診断">
+    <meta name="twitter:description" content="マインドとシステムの6軸から、全64タイプの「鳥籠」を診断。">
+    <meta name="twitter:image" content="https://nomunomuko1-rgb.github.io/Persona-Cage-Diagnostic/ilust/og-card.png">
     <!-- Google Fonts: Outfit & Noto Sans JP -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1180,9 +1190,60 @@
                             <button class="btn" onclick="restartDiagnostic()" style="margin-left: 0.5rem;">もう一度診断する</button>
                             <div class="share-actions">
                                 <button class="btn btn-secondary" onclick="copyShareUrl()">共有URLをコピー</button>
+                                <button class="btn btn-secondary" onclick="shareResultOnX()">Xで共有</button>
                                 <button class="btn btn-secondary" onclick="openCatalog()">図鑑で見る</button>
                             </div>
                             <div class="share-note" id="share-url-note">結果が確定すると共有URLが発行されます。</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. タイプ詳細画面 -->
+            <div id="type-screen" class="screen">
+                <div class="title-area">
+                    <p>TYPE ARCHIVE</p>
+                    <h1 style="font-size: 1.8rem; margin-top: 0.3rem;">タイプ詳細</h1>
+                </div>
+
+                <div class="result-container">
+                    <div class="result-illustration-wrapper" id="type-illustration-container">
+                        <div class="layer-bg-effect"></div>
+                        <div class="illustration-placeholder" id="type-illustration-placeholder">
+                            <div class="illustration-icon" id="type-icon">🦊</div>
+                            <div class="illustration-text">
+                                <p id="type-code-preview" style="font-weight: 600; color: var(--text-main);">[CODE]</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="result-details">
+                        <div class="result-code-tag" id="type-code">LDF-OMC</div>
+                        <h2 class="result-main-title" id="type-title">運命の設計士 × 多重構造の鳥籠</h2>
+
+                        <div class="result-compatibility" style="margin-bottom: 1.5rem; font-size: 0.95rem; color: var(--accent-gold); display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                            <span style="font-weight: 500;">✦ 相性の良いパートナー:</span>
+                            <strong id="type-compat" style="letter-spacing: 1px; color: var(--text-main); background: rgba(212, 175, 55, 0.1); padding: 0.2rem 0.6rem; border-radius: 6px; border: 1px solid rgba(212, 175, 55, 0.2); font-size: 0.85rem;">FDF-OMC</strong>
+                        </div>
+
+                        <div class="result-section">
+                            <h3 class="result-section-title">精神的関係性（マインドタイプ）</h3>
+                            <div class="result-section-content" id="type-mind-desc"></div>
+                        </div>
+
+                        <div class="result-section">
+                            <h3 class="result-section-title">物理的運用環境（システムタイプ）</h3>
+                            <div class="result-section-content" id="type-system-desc"></div>
+                        </div>
+
+                        <div class="result-footer">
+                            <button class="btn" onclick="startDiagnostic()">自分も診断する</button>
+                            <div class="share-actions">
+                                <button class="btn btn-secondary" onclick="copyTypeUrl()">タイプURLをコピー</button>
+                                <button class="btn btn-secondary" onclick="shareTypeOnX()">Xで共有</button>
+                                <button class="btn btn-secondary" onclick="openCatalog()">図鑑に戻る</button>
+                            </div>
+                            <div class="share-note" id="type-url-note"></div>
                         </div>
                     </div>
                 </div>
@@ -1365,7 +1426,23 @@
 
         const defaultTheme = { gold: "#d4af37", purple: "#7a5c8f", glow: "rgba(122, 92, 143, 0.3)" };
 
+        const compatibilityMap = {
+            "LCS": { matchMind: "FCS", matchMindName: "鳥籠の小鳥" },
+            "LCF": { matchMind: "FCF", matchMindName: "移り気な迷い子" },
+            "LDS": { matchMind: "FDS", matchMindName: "忠実な記録員" },
+            "LDF": { matchMind: "FDF", matchMindName: "漂流する観測対象" },
+            "FCS": { matchMind: "LCS", matchMindName: "独占的保護者" },
+            "FCF": { matchMind: "LCF", matchMindName: "劇場の支配人" },
+            "FDS": { matchMind: "LDS", matchMindName: "冷徹な管理者" },
+            "FDF": { matchMind: "LDF", matchMindName: "運命の設計士" }
+        };
+
         // 状態変数
+        const appBaseUrl = location.href.split('?')[0];
+        let currentTypeCode = '';
+        let lastShareUrl = '';
+        let lastResultTitle = '';
+        let lastResultCode = '';
         let currentQuestionIndex = 0;
         let answers = Array(questions.length).fill(null);
 
@@ -1373,7 +1450,8 @@
         const screens = {
             intro: document.getElementById('intro-screen'),
             question: document.getElementById('question-screen'),
-            result: document.getElementById('result-screen')
+            result: document.getElementById('result-screen'),
+            type: document.getElementById('type-screen')
         };
 
         function switchScreen(target) {
@@ -1396,6 +1474,7 @@
         function startDiagnostic() {
             currentQuestionIndex = 0;
             answers = Array(questions.length).fill(null);
+            if (window.history && history.replaceState) history.replaceState(null, '', location.pathname);
             showQuestion();
             switchScreen('question');
         }
@@ -1497,21 +1576,13 @@
             const systemInfo = systemTypes[systemCode];
             const icon = typeIcons[mindCode] || "🦊";
 
-            // 相性判定ロジック定義
-            const compatibilityMap = {
-                "LCS": { matchMind: "FCS", matchMindName: "鳥籠の小鳥" },
-                "LCF": { matchMind: "FCF", matchMindName: "移り気な迷い子" },
-                "LDS": { matchMind: "FDS", matchMindName: "忠実な記録員" },
-                "LDF": { matchMind: "FDF", matchMindName: "漂流する観測対象" },
-                "FCS": { matchMind: "LCS", matchMindName: "独占的保護者" },
-                "FCF": { matchMind: "LCF", matchMindName: "劇場の支配人" },
-                "FDS": { matchMind: "LDS", matchMindName: "冷徹な管理者" },
-                "FDF": { matchMind: "LDF", matchMindName: "運命の設計士" }
-            };
-
             const compatInfo = compatibilityMap[mindCode];
             const compatFullCode = `${compatInfo.matchMind}-${systemCode}`;
             const compatText = `${compatFullCode} (${compatInfo.matchMindName})`;
+
+            lastShareUrl = shareUrl;
+            lastResultCode = fullCode;
+            lastResultTitle = `${mindInfo.name} × ${systemInfo.name}`;
 
             // 傾向パーセンテージ計算 (各軸4問。合計4〜20点。％＝ (S-4)/16 * 100)
             const calcPct = (score) => Math.round(((score - 4) / 16) * 100);
@@ -1710,6 +1781,8 @@
                     const code = `${m}-${s}`;
                     const card = document.createElement('div');
                     card.className = 'type-card' + (code === currentResultCode ? ' current' : '');
+                    card.style.cursor = 'pointer';
+                    card.onclick = () => showTypeDetail(code);
                     const img = document.createElement('div');
                     img.className = 'type-card-img';
                     img.style.backgroundImage = `url('${typeImageMap[m]}')`;
@@ -1723,9 +1796,94 @@
             });
         }
 
-        // 共有URLからの復元
+        // タイプ詳細表示
+        function showTypeDetail(code, pushState = true) {
+            const mind = code.slice(0, 3);
+            const system = code.slice(4, 7);
+            if (!mindTypes[mind] || !systemTypes[system]) return;
+
+            currentTypeCode = code;
+            applyTheme(mind);
+
+            const mindInfo = mindTypes[mind];
+            const systemInfo = systemTypes[system];
+            const compatInfo = compatibilityMap[mind];
+            const compatText = `${compatInfo.matchMind}-${system} (${compatInfo.matchMindName})`;
+            const typeUrl = `${appBaseUrl}?type=${code}`;
+
+            document.getElementById('type-code').innerText = code;
+            document.getElementById('type-code-preview').innerText = code;
+            document.getElementById('type-title').innerText = `${mindInfo.name} × ${systemInfo.name}`;
+            document.getElementById('type-mind-desc').innerText = mindInfo.desc;
+            document.getElementById('type-system-desc').innerText = systemInfo.desc;
+            document.getElementById('type-icon').innerText = typeIcons[mind] || '🦊';
+            document.getElementById('type-compat').innerText = compatText;
+            document.getElementById('type-url-note').innerText = typeUrl;
+
+            const container = document.getElementById('type-illustration-container');
+            const placeholder = document.getElementById('type-illustration-placeholder');
+            const imageUrl = typeImageMap[mind];
+            if (imageUrl) {
+                container.style.backgroundImage = `url('${imageUrl}')`;
+                container.style.backgroundSize = 'cover';
+                container.style.backgroundPosition = 'center';
+                placeholder.style.display = 'none';
+            } else {
+                container.style.backgroundImage = 'none';
+                placeholder.style.display = 'block';
+            }
+
+            if (pushState && window.history && history.replaceState) {
+                history.replaceState(null, '', `?type=${code}`);
+            }
+            closeCatalog();
+            switchScreen('type');
+        }
+
+        function copyTypeUrl() {
+            const note = document.getElementById('type-url-note');
+            const url = note ? note.innerText : '';
+            if (!url || url.indexOf('http') !== 0) {
+                alert('タイプURLがまだ発行されていません。');
+                return;
+            }
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(url).then(() => {
+                    alert('タイプURLをコピーしました。');
+                }).catch(() => fallbackCopy(url));
+            } else {
+                fallbackCopy(url);
+            }
+        }
+
+        function shareTypeOnX() {
+            const note = document.getElementById('type-url-note');
+            const url = note ? note.innerText : '';
+            const title = document.getElementById('type-title').innerText;
+            if (!url || url.indexOf('http') !== 0) return;
+            const text = `タイプ図鑑：「${title}」（${currentTypeCode}）`;
+            const intent = `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+            window.open(intent, '_blank');
+        }
+
+        function shareResultOnX() {
+            if (!lastShareUrl) {
+                alert('共有URLがまだ発行されていません。');
+                return;
+            }
+            const text = `私のタイプは「${lastResultTitle}」（${lastResultCode}）でした。`;
+            const intent = `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(lastShareUrl)}`;
+            window.open(intent, '_blank');
+        }
+
+        // 共有URL・タイプURLからの復元
         function restoreFromQuery() {
             const params = new URLSearchParams(location.search);
+            const type = params.get('type');
+            if (type && /^[A-Z]{3}-[A-Z]{3}$/.test(type)) {
+                showTypeDetail(type, false);
+                return;
+            }
             const a = params.get('a');
             if (!a || !/^[1-5]{24}$/.test(a)) return;
             answers = a.split('').map(Number);
